@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Django Chat</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .chat-container { width: 400px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        .chat-box { height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; border-radius: 5px; background: #fafafa; }
+        .chat-box li { list-style: none; margin-bottom: 8px; padding: 5px 10px; border-radius: 5px; background: #e1ffc7; width: fit-content; }
+        input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <h2>💬 Python Chat</h2>
+    <input type="text" id="username" placeholder="ඔයාගේ නම (Username)" value="Guest">
+    
+    <div class="chat-box">
+        <ul id="messages" style="padding: 0;"></ul>
+    </div>
+
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send Message</button>
+</div>
+
+<script>
+    // අපි සම්බන්ධ වෙන්නේ FastAPI එකට (Port 8000)
+    var ws = new WebSocket("ws://localhost:8000/ws");
+
+    window.onload = async function() {
+        try {
+            const response = await fetch('http://localhost:8000/messages');
+            const messages = await response.json();
+            messages.forEach(msg => {
+                displayMessage(msg.username, msg.content);
+            });
+        } catch (e) {
+            console.log("FastAPI is offline!");
+        }
+    };
+
+    ws.onmessage = function(event) {
+        var data = JSON.parse(event.data);
+        displayMessage(data.username, data.content);
+    };
+
+    function sendMessage() {
+        var input = document.getElementById("messageInput");
+        var username = document.getElementById("username").value;
+        
+        if(input.value.trim() === "") return;
+
+        var data = {
+            username: username,
+            content: input.value
+        };
+        
+        ws.send(JSON.stringify(data));
+        input.value = '';
+    }
+
+    function displayMessage(username, content) {
+        var messages = document.getElementById('messages');
+        var message = document.createElement('li');
+        message.innerHTML = `<strong>${username}:</strong> ${content}`;
+        messages.appendChild(message);
+        
+        var box = document.querySelector('.chat-box');
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
+
+</body>
+</html>
