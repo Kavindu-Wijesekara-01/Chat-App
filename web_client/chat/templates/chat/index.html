@@ -2,78 +2,167 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Django Chat</title>
+    <title>Private Chat</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .chat-container { width: 400px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
-        .chat-box { height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; border-radius: 5px; background: #fafafa; }
-        .chat-box li { list-style: none; margin-bottom: 8px; padding: 5px 10px; border-radius: 5px; background: #e1ffc7; width: fit-content; }
-        input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #0056b3; }
+        body { font-family: sans-serif; display: flex; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
+        .hidden { display: none; }
+        
+        /* Layout Styles */
+        .main-container { display: flex; width: 800px; height: 90vh; background: white; margin-top: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
+        /* Left Side: User List */
+        .user-list { width: 30%; border-right: 1px solid #ccc; background: #fff; overflow-y: auto; }
+        .user-item { padding: 15px; border-bottom: 1px solid #f1f1f1; cursor: pointer; }
+        .user-item:hover, .active-user { background-color: #e9eff5; font-weight: bold; }
+        .user-header { padding: 15px; background: #007bff; color: white; font-weight: bold; }
+
+        /* Right Side: Chat Area */
+        .chat-area { width: 70%; display: flex; flex-direction: column; }
+        .chat-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; font-weight: bold; }
+        .messages { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; }
+        .input-area { padding: 15px; border-top: 1px solid #ddd; display: flex; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; margin-left: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+
+        /* Message Bubbles */
+        .message { padding: 8px 12px; margin-bottom: 8px; border-radius: 15px; max-width: 70%; word-wrap: break-word; }
+        .sent { align-self: flex-end; background: #007bff; color: white; }
+        .received { align-self: flex-start; background: #e4e6eb; color: black; }
+
+        /* Login Form Styles */
+        .login-container { width: 300px; padding: 20px; background: white; margin-top: 100px; text-align: center; }
+        .login-input { width: 90%; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div class="chat-container">
-    <h2>💬 Python Chat</h2>
-    <input type="text" id="username" placeholder="ඔයාගේ නම (Username)" value="Guest">
-    
-    <div class="chat-box">
-        <ul id="messages" style="padding: 0;"></ul>
+    <div id="auth-screen" class="login-container">
+        <h2>Login</h2>
+        <input type="text" id="username" class="login-input" placeholder="Username">
+        <input type="password" id="password" class="login-input" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <button onclick="register()" style="background: green; margin-top: 5px;">Register</button>
     </div>
 
-    <input type="text" id="messageInput" placeholder="Type a message...">
-    <button onclick="sendMessage()">Send Message</button>
-</div>
+    <div id="chat-screen" class="main-container hidden">
+        <div class="user-list">
+            <div class="user-header">Users</div>
+            <div id="users-box"></div>
+        </div>
 
-<script>
-    // අපි සම්බන්ධ වෙන්නේ FastAPI එකට (Port 8000)
-    var ws = new WebSocket("ws://localhost:8000/ws");
+        <div class="chat-area">
+            <div class="chat-header" id="chat-header">Select a user to chat</div>
+            <div class="messages" id="messages-box"></div>
+            <div class="input-area">
+                <input type="text" id="msg-input" placeholder="Type a message...">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
 
-    window.onload = async function() {
-        try {
-            const response = await fetch('http://localhost:8000/messages');
-            const messages = await response.json();
-            messages.forEach(msg => {
-                displayMessage(msg.username, msg.content);
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+        let currentUser = null;
+        let selectedUser = null;
+        let ws = null;
+
+        // --- Auth Functions ---
+        async function register() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            await fetch(`${API_URL}/register`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({username: u, email: u+"@test.com", password: p})
             });
-        } catch (e) {
-            console.log("FastAPI is offline!");
+            alert("Registered! Now Login.");
         }
-    };
 
-    ws.onmessage = function(event) {
-        var data = JSON.parse(event.data);
-        displayMessage(data.username, data.content);
-    };
+        async function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const res = await fetch(`${API_URL}/login`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
 
-    function sendMessage() {
-        var input = document.getElementById("messageInput");
-        var username = document.getElementById("username").value;
-        
-        if(input.value.trim() === "") return;
+            if(res.ok) {
+                currentUser = u;
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('chat-screen').classList.remove('hidden');
+                connectWS();
+                loadUserList();
+            } else {
+                alert("Login Failed");
+            }
+        }
 
-        var data = {
-            username: username,
-            content: input.value
-        };
-        
-        ws.send(JSON.stringify(data));
-        input.value = '';
-    }
+        // --- WebSocket Connection ---
+        function connectWS() {
+            // නම (username) ලින්ක් එකේ යවනවා
+            ws = new WebSocket(`ws://127.0.0.1:8000/ws/${currentUser}`);
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                // මැසේජ් එක ආවේ මම තෝරාගෙන ඉන්න යාලුවගෙන් නම් හෝ මම යැවූ එකක් නම් පෙන්නනවා
+                if (data.sender === selectedUser || data.sender === currentUser) {
+                    displayMessage(data.sender, data.content);
+                }
+            };
+        }
 
-    function displayMessage(username, content) {
-        var messages = document.getElementById('messages');
-        var message = document.createElement('li');
-        message.innerHTML = `<strong>${username}:</strong> ${content}`;
-        messages.appendChild(message);
-        
-        var box = document.querySelector('.chat-box');
-        box.scrollTop = box.scrollHeight;
-    }
-</script>
+        // --- Load Users ---
+        async function loadUserList() {
+            const res = await fetch(`${API_URL}/users/${currentUser}`);
+            const users = await res.json();
+            const box = document.getElementById('users-box');
+            box.innerHTML = "";
+            
+            users.forEach(user => {
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.innerText = user;
+                div.onclick = () => selectUser(user, div);
+                box.appendChild(div);
+            });
+        }
 
+        // --- Select User to Chat ---
+        async function selectUser(user, element) {
+            selectedUser = user;
+            document.getElementById('chat-header').innerText = `Chat with ${user}`;
+            document.getElementById('messages-box').innerHTML = ""; // Clear old chat
+            
+            // Highlight selected
+            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active-user'));
+            element.classList.add('active-user');
+
+            // Load History
+            const res = await fetch(`${API_URL}/messages/${currentUser}/${selectedUser}`);
+            const msgs = await res.json();
+            msgs.forEach(m => displayMessage(m.sender, m.content));
+        }
+
+        // --- Send & Display ---
+        function sendMessage() {
+            const input = document.getElementById('msg-input');
+            if(!input.value || !selectedUser) return;
+            
+            const data = {
+                recipient: selectedUser,
+                content: input.value
+            };
+            ws.send(JSON.stringify(data));
+            input.value = "";
+        }
+
+        function displayMessage(sender, content) {
+            const box = document.getElementById('messages-box');
+            const div = document.createElement('div');
+            div.className = `message ${sender === currentUser ? 'sent' : 'received'}`;
+            div.innerText = content;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
 </body>
 </html>
