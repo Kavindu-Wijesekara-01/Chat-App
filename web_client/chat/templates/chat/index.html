@@ -2,59 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Private Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniTech Community Chat</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
-        .hidden { display: none; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; }
         
-        /* Layout Styles */
-        .main-container { display: flex; width: 800px; height: 90vh; background: white; margin-top: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        /* --- Login Screen --- */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .login-box { background: white; padding: 40px; border-radius: 10px; text-align: center; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .login-box h2 { color: #333; margin-bottom: 20px; }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .login-box button:hover { background: #2980b9; }
+
+        /* --- Dashboard Sidebar --- */
+        .sidebar { width: 280px; background: #2c3e50; color: white; display: flex; flex-direction: column; height: 100vh; flex-shrink: 0; }
+        .sidebar-header { padding: 20px; font-weight: bold; font-size: 1.2rem; background: #1a252f; flex-shrink: 0; border-bottom: 1px solid #34495e; }
         
-        /* Left Side: User List */
-        .user-list { width: 30%; border-right: 1px solid #ccc; background: #fff; overflow-y: auto; }
-        .user-item { padding: 15px; border-bottom: 1px solid #f1f1f1; cursor: pointer; }
-        .user-item:hover, .active-user { background-color: #e9eff5; font-weight: bold; }
-        .user-header { padding: 15px; background: #007bff; color: white; font-weight: bold; }
+        .list-section { padding: 15px 20px 5px; font-size: 0.85rem; color: #95a5a6; text-transform: uppercase; font-weight: bold; flex-shrink: 0; }
+        
+        .list-container { flex: 1; overflow-y: auto; min-height: 0; margin-bottom: 10px; }
+        .list-container::-webkit-scrollbar { width: 6px; }
+        .list-container::-webkit-scrollbar-thumb { background: #566573; border-radius: 3px; }
 
-        /* Right Side: Chat Area */
-        .chat-area { width: 70%; display: flex; flex-direction: column; }
-        .chat-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; font-weight: bold; }
-        .messages { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; }
-        .input-area { padding: 15px; border-top: 1px solid #ddd; display: flex; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 10px 20px; margin-left: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; transition: background 0.2s; }
+        .item:hover { background: #34495e; }
+        .item.active { background: #2980b9; border-left: 4px solid #3498db; }
+        .room-icon { margin-right: 10px; opacity: 0.7; }
+        .status { width: 10px; height: 10px; background: #2ecc71; border-radius: 50%; margin-right: 10px; }
 
-        /* Message Bubbles */
-        .message { padding: 8px 12px; margin-bottom: 8px; border-radius: 15px; max-width: 70%; word-wrap: break-word; }
-        .sent { align-self: flex-end; background: #007bff; color: white; }
-        .received { align-self: flex-start; background: #e4e6eb; color: black; }
+        /* --- Chat Area --- */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: white; min-width: 0; }
+        .chat-header { padding: 15px 25px; border-bottom: 1px solid #ddd; font-weight: bold; background: #fff; font-size: 1.1rem; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        .messages { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f8f9fa; }
+        
+        .input-area { padding: 20px; background: white; border-top: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
+        .input-area input { flex: 1; padding: 12px 20px; border: 1px solid #ccc; border-radius: 30px; outline: none; font-size: 1rem; }
+        .input-area button { padding: 10px 25px; background: #3498db; color: white; border: none; border-radius: 30px; cursor: pointer; font-weight: bold; }
+        .input-area button:hover { background: #2980b9; }
 
-        /* Login Form Styles */
-        .login-container { width: 300px; padding: 20px; background: white; margin-top: 100px; text-align: center; }
-        .login-input { width: 90%; margin-bottom: 10px; }
+        .message { padding: 10px 16px; border-radius: 18px; max-width: 70%; word-wrap: break-word; font-size: 0.95rem; line-height: 1.4; position: relative; }
+        .my-msg { align-self: flex-end; background: #3498db; color: white; border-bottom-right-radius: 4px; }
+        .other-msg { align-self: flex-start; background: #e9ecef; color: #333; border-bottom-left-radius: 4px; }
+        .meta { font-size: 0.7rem; margin-bottom: 4px; font-weight: bold; opacity: 0.8; }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div id="auth-screen" class="login-container">
-        <h2>Login</h2>
-        <input type="text" id="username" class="login-input" placeholder="Username">
-        <input type="password" id="password" class="login-input" placeholder="Password">
-        <button onclick="login()">Login</button>
-        <button onclick="register()" style="background: green; margin-top: 5px;">Register</button>
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>🎓 UniTech Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="login()">Enter Community</button>
+        </div>
     </div>
 
-    <div id="chat-screen" class="main-container hidden">
-        <div class="user-list">
-            <div class="user-header">Users</div>
-            <div id="users-box"></div>
+    <div id="dashboard" class="hidden" style="display: flex; width: 100%;">
+        <div class="sidebar">
+            <div class="sidebar-header">UniTech Community</div>
+            <div class="list-section">📚 Tech Rooms</div>
+            <div id="rooms-list" class="list-container"></div>
+            <div class="list-section">💬 Direct Messages</div>
+            <div id="users-list" class="list-container"></div>
+            <div style="padding: 15px; border-top: 1px solid #34495e;">
+                <button onclick="logout()" style="width: 100%; padding: 8px; background: transparent; border: 1px solid #95a5a6; color: #bdc3c7; border-radius: 4px; cursor: pointer;">Logout</button>
+            </div>
         </div>
 
         <div class="chat-area">
-            <div class="chat-header" id="chat-header">Select a user to chat</div>
+            <div class="chat-header" id="chat-header">👋 Welcome! Select a Room</div>
             <div class="messages" id="messages-box"></div>
             <div class="input-area">
-                <input type="text" id="msg-input" placeholder="Type a message...">
+                <input type="text" id="msg-input" placeholder="Type your problem here..." onkeypress="handleEnter(event)">
                 <button onclick="sendMessage()">Send</button>
             </div>
         </div>
@@ -63,23 +86,30 @@
     <script>
         const API_URL = "http://127.0.0.1:8000";
         let currentUser = null;
-        let selectedUser = null;
         let ws = null;
-
-        // --- Auth Functions ---
-        async function register() {
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
-            await fetch(`${API_URL}/register`, {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({username: u, email: u+"@test.com", password: p})
-            });
-            alert("Registered! Now Login.");
-        }
+        let activeType = null;
+        let activeTarget = null;
 
         async function login() {
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
+            // මෙන්න මෙතන තමයි අර IDs වලින් data ගන්නේ
+            const uInput = document.getElementById('username');
+            const pInput = document.getElementById('password');
+
+            const u = uInput.value.trim();
+            const p = pInput.value.trim();
+
+            console.log("Username Typed:", u); // Debugging සඳහා
+            console.log("Password Typed:", p); // Debugging සඳහා
+
+            if(!u || !p) return alert("Please fill all fields");
+
+            try {
+                await fetch(`${API_URL}/register`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({username: u, email: u+"@test.com", password: p})
+                });
+            } catch(e) {} 
+            
             const res = await fetch(`${API_URL}/login`, {
                 method: 'POST', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({username: u, password: p})
@@ -87,82 +117,104 @@
 
             if(res.ok) {
                 currentUser = u;
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('chat-screen').classList.remove('hidden');
-                connectWS();
-                loadUserList();
-            } else {
-                alert("Login Failed");
-            }
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                document.getElementById('dashboard').style.display = 'flex';
+                initApp();
+            } else { alert("Login Failed"); }
         }
 
-        // --- WebSocket Connection ---
+        function initApp() {
+            loadRooms();
+            loadUsers();
+            connectWS();
+        }
+
         function connectWS() {
-            // නම (username) ලින්ක් එකේ යවනවා
             ws = new WebSocket(`ws://127.0.0.1:8000/ws/${currentUser}`);
-            
-            ws.onmessage = function(event) {
+            ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                // මැසේජ් එක ආවේ මම තෝරාගෙන ඉන්න යාලුවගෙන් නම් හෝ මම යැවූ එකක් නම් පෙන්නනවා
-                if (data.sender === selectedUser || data.sender === currentUser) {
+                if (data.type === 'channel' && activeType === 'channel' && data.channel === activeTarget) {
                     displayMessage(data.sender, data.content);
                 }
+                if (data.type === 'private' && activeType === 'private') {
+                    if (data.sender === activeTarget || (data.sender === currentUser && data.recipient === activeTarget)) {
+                        displayMessage(data.sender, data.content);
+                    }
+                }
             };
+            ws.onclose = () => { setTimeout(connectWS, 3000); };
         }
 
-        // --- Load Users ---
-        async function loadUserList() {
-            const res = await fetch(`${API_URL}/users/${currentUser}`);
-            const users = await res.json();
-            const box = document.getElementById('users-box');
+        async function loadRooms() {
+            const res = await fetch(`${API_URL}/channels`);
+            const rooms = await res.json();
+            const box = document.getElementById('rooms-list');
             box.innerHTML = "";
-            
-            users.forEach(user => {
+            rooms.forEach(r => {
                 const div = document.createElement('div');
-                div.className = 'user-item';
-                div.innerText = user;
-                div.onclick = () => selectUser(user, div);
+                div.className = 'item';
+                div.innerHTML = `<span class="room-icon">#</span> ${r.name}`;
+                div.onclick = () => selectChat('channel', r.name, div);
                 box.appendChild(div);
             });
         }
 
-        // --- Select User to Chat ---
-        async function selectUser(user, element) {
-            selectedUser = user;
-            document.getElementById('chat-header').innerText = `Chat with ${user}`;
-            document.getElementById('messages-box').innerHTML = ""; // Clear old chat
-            
-            // Highlight selected
-            document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active-user'));
-            element.classList.add('active-user');
+        async function loadUsers() {
+            const res = await fetch(`${API_URL}/users/${currentUser}`);
+            const users = await res.json();
+            const box = document.getElementById('users-list');
+            box.innerHTML = "";
+            users.forEach(u => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerHTML = `<div class="status"></div> ${u.username}`;
+                div.onclick = () => selectChat('private', u.username, div);
+                box.appendChild(div);
+            });
+        }
 
-            // Load History
-            const res = await fetch(`${API_URL}/messages/${currentUser}/${selectedUser}`);
+        async function selectChat(type, target, elem) {
+            activeType = type;
+            activeTarget = target;
+            document.querySelectorAll('.item').forEach(e => e.classList.remove('active'));
+            elem.classList.add('active');
+            
+            const icon = type === 'channel' ? '#' : '👤';
+            document.getElementById('chat-header').innerText = `${icon} ${target}`;
+            document.getElementById('messages-box').innerHTML = "";
+
+            const url = type === 'channel' 
+                ? `${API_URL}/messages/channel/${target}` 
+                : `${API_URL}/messages/private/${currentUser}/${target}`;
+            
+            const res = await fetch(url);
             const msgs = await res.json();
             msgs.forEach(m => displayMessage(m.sender, m.content));
         }
 
-        // --- Send & Display ---
         function sendMessage() {
             const input = document.getElementById('msg-input');
-            if(!input.value || !selectedUser) return;
-            
-            const data = {
-                recipient: selectedUser,
-                content: input.value
-            };
-            ws.send(JSON.stringify(data));
+            const content = input.value.trim();
+            if(!content || !activeTarget) return;
+
+            const payload = { type: activeType, target: activeTarget, content: content };
+            ws.send(JSON.stringify(payload));
             input.value = "";
         }
 
         function displayMessage(sender, content) {
             const box = document.getElementById('messages-box');
             const div = document.createElement('div');
-            div.className = `message ${sender === currentUser ? 'sent' : 'received'}`;
-            div.innerText = content;
+            const isMe = sender === currentUser;
+            div.className = `message ${isMe ? 'my-msg' : 'other-msg'}`;
+            div.innerHTML = `<div class="meta">${isMe ? 'You' : sender}</div><div>${content}</div>`;
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         }
+
+        function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
+        function logout() { location.reload(); }
     </script>
 </body>
 </html>
